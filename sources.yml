@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: raw
+    database: CAPSTONE_DB
+    schema: RAW
+    tables:
+      - name: customers
+      - name: stores
+      - name: products
+      - name: orders
+      - name: order_items
