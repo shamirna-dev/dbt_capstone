@@ -45,4 +45,4 @@ models:
 
       - name: product_id
         tests:
-          - not_
+          - not_null
