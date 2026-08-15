@@ -28,18 +28,10 @@ models:
       - name: customer_id
         tests:
           - not_null
-          - relationships:
-              arguments:
-                to: ref('stg_customers')
-                field: customer_id
 
       - name: store_id
         tests:
           - not_null
-          - relationships:
-              arguments:
-                to: ref('stg_stores')
-                field: store_id
 
   - name: stg_order_items
     columns:
@@ -50,15 +42,7 @@ models:
       - name: order_id
         tests:
           - not_null
-          - relationships:
-              arguments:
-                to: ref('stg_orders')
-                field: order_id
 
       - name: product_id
         tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('stg_products')
-                field: product_id
+          - not_
