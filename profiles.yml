@@ -1,0 +1,18 @@
+capstone_bi_assistant:
+  target: dev
+
+  outputs:
+    dev:
+      type: snowflake
+      account: QQGPHKY-KG63228
+      user: SHAMIRNA
+      password: <YOUR_PASSWORD>
+
+      role: ACCOUNTADMIN
+
+      warehouse: COMPUTE_WH
+      database: CAPSTONE_DB
+      schema: STAGING
+
+      threads: 4
+      client_session_keep_alive: false
