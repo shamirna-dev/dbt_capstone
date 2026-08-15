@@ -4,48 +4,61 @@ models:
   - name: stg_customers
     columns:
       - name: customer_id
-        tests: not_null
+        tests:
+          - not_null
 
   - name: stg_stores
     columns:
       - name: store_id
-        tests: not_null
+        tests:
+          - not_null
 
   - name: stg_products
     columns:
       - name: product_id
-        tests: not_null
+        tests:
+          - not_null
 
   - name: stg_orders
     columns:
       - name: order_id
-        tests: not_null
+        tests:
+          - not_null
+
       - name: customer_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_customers')
-              field: customer_id
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+
       - name: store_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_stores')
-              field: store_id
+              arguments:
+                to: ref('stg_stores')
+                field: store_id
 
   - name: stg_order_items
     columns:
       - name: order_item_id
-        tests: not_null
+        tests:
+          - not_null
+
       - name: order_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_orders')
-              field: order_id
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+
       - name: product_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_products')
-              field: product_id
+              arguments:
+                to: ref('stg_products')
+                field: product_id
