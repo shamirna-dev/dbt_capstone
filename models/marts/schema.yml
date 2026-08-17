@@ -1,0 +1,98 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: Daily date spine, 2023-01-01 to 2024-12-31.
+    columns:
+      - name: date_day
+        tests:
+          - unique:
+              config:
+                severity: warn
+          - not_null:
+              config:
+                severity: warn
+
+  - name: dim_customer
+    description: One row per customer.
+    columns:
+      - name: customer_id
+        tests:
+          - unique:
+              config:
+                severity: warn
+          - not_null:
+              config:
+                severity: warn
+
+  - name: dim_product
+    description: One row per product, with cost/price/margin.
+    columns:
+      - name: product_id
+        tests:
+          - unique:
+              config:
+                severity: warn
+          - not_null:
+              config:
+                severity: warn
+
+  - name: dim_store
+    description: One row per store.
+    columns:
+      - name: store_id
+        tests:
+          - unique:
+              config:
+                severity: warn
+          - not_null:
+              config:
+                severity: warn
+
+  - name: fact_orders
+    description: >
+      Grain = one row per order line item. Joins to dim_customer, dim_store,
+      dim_product, and dim_date(order_date) to answer revenue/quantity
+      questions across any dimension.
+    columns:
+      - name: order_item_id
+        tests:
+          - unique:
+              config:
+                severity: warn
+          - not_null:
+              config:
+                severity: warn
+
+      - name: customer_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_id
+              config:
+                severity: warn
+
+      - name: store_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_store')
+                field: store_id
+              config:
+                severity: warn
+
+      - name: product_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_id
+              config:
+                severity: warn
+
+      - name: revenue
+        tests:
+          - not_null:
+              config:
+                severity: warn
