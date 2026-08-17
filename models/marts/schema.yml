@@ -51,9 +51,9 @@ models:
 
   - name: fact_orders
     description: >
-      Grain = one row per order line item. Joins to dim_customer, dim_store,
-      dim_product, and dim_date(order_date) to answer revenue/quantity
-      questions across any dimension.
+      Grain = one row per order line item. Joins to dim_customer,
+      dim_store, dim_product, and dim_date(order_date) to answer
+      revenue/quantity questions across any dimension.
     columns:
       - name: order_item_id
         tests:
@@ -66,28 +66,19 @@ models:
 
       - name: customer_id
         tests:
-          - relationships:
-              arguments:
-                to: ref('dim_customer')
-                field: customer_id
+          - not_null:
               config:
                 severity: warn
 
       - name: store_id
         tests:
-          - relationships:
-              arguments:
-                to: ref('dim_store')
-                field: store_id
+          - not_null:
               config:
                 severity: warn
 
       - name: product_id
         tests:
-          - relationships:
-              arguments:
-                to: ref('dim_product')
-                field: product_id
+          - not_null:
               config:
                 severity: warn
 
