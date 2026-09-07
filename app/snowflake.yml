@@ -1,0 +1,15 @@
+definition_version: 2
+
+entities:
+  capstone_dashboard:
+    type: streamlit
+    identifier:
+      name: CAPSTONE_DASHBOARD
+      schema: APP
+      database: CAPSTONE_AI_DLC
+    stage: CAPSTONE_AI_DLC.APP.STREAMLIT_STAGE
+    query_warehouse: COMPUTE_WH
+    main_file: streamlit_app.py
+    artifacts:
+      - streamlit_app.py
+      - environment.yml

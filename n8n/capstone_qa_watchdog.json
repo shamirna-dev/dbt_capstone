@@ -1,0 +1,173 @@
+{
+  "name": "Capstone - QA Watchdog and Defect Triage",
+  "meta": {
+    "description": "Scheduled data quality run against the deployed pipeline. On failure it triages the defect and reports. Does not regenerate the test suite - it runs the approved one."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 6 }]
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-660, 300],
+      "notes": "Matches the 60-minute Silver freshness target loosely; tighten only if the business genuinely needs it, since every reduction costs warehouse credits."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-1",
+              "name": "sfHost",
+              "value": "igtstwc-td17035.snowflakecomputing.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $json.sfHost }}/api/v2/statements",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Snowflake-Authorization-Token-Type",
+              "value": "PROGRAMMATIC_ACCESS_TOKEN"
+            },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ statement: \"CALL CAPSTONE_AI_DLC.AGENTS.STAGE_QA('N8N', FALSE)\", timeout: 900, database: 'CAPSTONE_AI_DLC', schema: 'AGENTS', warehouse: 'COMPUTE_WH', role: 'ACCOUNTADMIN' }) }}",
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "Run Approved QA Suite",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-220, 300],
+      "notes": "P_REGENERATE = FALSE. A watchdog must run the suite a human approved, not invent a new one each cycle."
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst raw = body?.data?.[0]?.[0];\nif (!raw) {\n  throw new Error('No result from Snowflake: ' + JSON.stringify(body).slice(0, 500));\n}\nconst result = typeof raw === 'string' ? JSON.parse(raw) : raw;\nconst exec = result.execution ?? {};\nreturn [{ json: {\n  gate: result.gate,\n  passed: exec.passed ?? 0,\n  failed: exec.failed ?? 0,\n  errored: exec.errored ?? 0,\n  sfHost: $('Config').first().json.sfHost\n}}];"
+      },
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Parse QA Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "version": 2 },
+          "conditions": [
+            {
+              "id": "w-1",
+              "operator": { "type": "string", "operation": "equals" },
+              "leftValue": "={{ $json.gate }}",
+              "rightValue": "BLOCK"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000005",
+      "name": "Any Failures?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $json.sfHost }}/api/v2/statements",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Snowflake-Authorization-Token-Type",
+              "value": "PROGRAMMATIC_ACCESS_TOKEN"
+            },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ statement: \"CALL CAPSTONE_AI_DLC.AGENTS.STAGE_TRIAGE('CLEAN','N8N')\", timeout: 600, database: 'CAPSTONE_AI_DLC', schema: 'AGENTS', warehouse: 'COMPUTE_WH', role: 'ACCOUNTADMIN' }) }}",
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000006",
+      "name": "Triage Defect",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst raw = body?.data?.[0]?.[0];\nconst result = typeof raw === 'string' ? JSON.parse(raw) : raw;\nconst d = result?.defect ?? {};\nconst qa = $('Parse QA Result').first().json;\n\n// Severity drives who gets woken up. The taxonomy severity model is the\n// authority for this, not a guess in the workflow.\nconst escalate = ['CRITICAL', 'HIGH'].includes(d.severity);\n\nreturn [{ json: {\n  subject: `[${d.severity ?? 'UNKNOWN'}] AP pipeline data quality failure - ${d.category ?? 'uncategorised'}`,\n  escalate,\n  defect_id: d.defect_id ?? null,\n  category: d.category ?? null,\n  severity: d.severity ?? null,\n  confidence: d.confidence ?? null,\n  tests_failed: qa.failed,\n  tests_errored: qa.errored,\n  tests_passed: qa.passed,\n  body: [\n    `Failing tests: ${qa.failed} (errored: ${qa.errored}, passed: ${qa.passed})`,\n    `Triaged category: ${d.category}`,\n    `Severity: ${d.severity}`,\n    `Agent confidence: ${d.confidence}`,\n    ``,\n    `Root cause and remediation are recorded against defect ${d.defect_id}`,\n    `in CAPSTONE_AI_DLC.ARTIFACTS.DEFECTS. The triage is a starting point, not`,\n    `a verdict - confirm before acting.`\n  ].join('\\n')\n}}];"
+      },
+      "id": "b1000000-0000-4000-8000-000000000007",
+      "name": "Build Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 200],
+      "notes": "Replace the downstream no-op with a Slack, Teams or email node and wire it to this output. The alert deliberately states that triage is advisory."
+    },
+    {
+      "parameters": {},
+      "id": "b1000000-0000-4000-8000-000000000008",
+      "name": "Notify Channel (wire your own)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {},
+      "id": "b1000000-0000-4000-8000-000000000009",
+      "name": "All Clear",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [440, 420]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": { "main": [[{ "node": "Config", "type": "main", "index": 0 }]] },
+    "Config": { "main": [[{ "node": "Run Approved QA Suite", "type": "main", "index": 0 }]] },
+    "Run Approved QA Suite": { "main": [[{ "node": "Parse QA Result", "type": "main", "index": 0 }]] },
+    "Parse QA Result": { "main": [[{ "node": "Any Failures?", "type": "main", "index": 0 }]] },
+    "Any Failures?": {
+      "main": [
+        [{ "node": "Triage Defect", "type": "main", "index": 0 }],
+        [{ "node": "All Clear", "type": "main", "index": 0 }]
+      ]
+    },
+    "Triage Defect": { "main": [[{ "node": "Build Alert", "type": "main", "index": 0 }]] },
+    "Build Alert": { "main": [[{ "node": "Notify Channel (wire your own)", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

@@ -4,3 +4,11 @@ target/
 dbt_packages/
 logs/
 dbt_internal_packages/
+
+# capstone additions
+logs_*.txt
+api_probe.txt
+.pat_raw.txt
+output/
+__pycache__/
+*.pyc

@@ -1,0 +1,57 @@
+version: 2
+
+# Derived from GOVERNANCE.TARGET_CONTRACT and the DC-SILVER-AP-001 data contract.
+# The generated executable suite in ARTIFACTS.TEST_CASES is broader than this -
+# it also covers reconciliation, referential integrity, volume and freshness,
+# which dbt's generic tests cannot express. These are the subset that map cleanly
+# onto dbt generic tests.
+
+models:
+  - name: silver_ap_invoices
+    description: >
+      Conformed, source-agnostic AP invoice fact. Grain is one row per
+      (SOURCE_SYSTEM, SOURCE_INVOICE_ID). Contract DC-SILVER-AP-001 v2.1.
+    columns:
+      - name: INVOICE_KEY
+        description: Deterministic surrogate key, SOURCE_SYSTEM || '-' || SOURCE_INVOICE_ID.
+        tests: [unique, not_null]
+      - name: SOURCE_SYSTEM
+        description: Originating ERP.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['SAP', 'ORACLE', 'BAAN']
+      - name: SOURCE_INVOICE_ID
+        tests: [not_null]
+      - name: INVOICE_NUMBER
+        description: Human-readable invoice number. Not unique across sources.
+        tests: [not_null]
+      - name: VENDOR_ID
+        tests: [not_null]
+      - name: VENDOR_NAME
+        tests: [not_null]
+      - name: INVOICE_DATE
+        tests: [not_null]
+      - name: INVOICE_AMOUNT
+        description: Gross amount in CURRENCY_CODE. Must be greater than zero.
+        tests: [not_null]
+      - name: CURRENCY_CODE
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['USD', 'EUR', 'GBP']
+      - name: PAYMENT_TERMS
+        description: >
+          Canonical NETnn or NULL. Never defaulted - BR-NORM-001 records that
+          defaulting unmapped codes to NET30 understated DPO by 11 days.
+      - name: APPROVAL_STATUS
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['APPROVED', 'PENDING', 'REJECTED', 'PAID']
+      - name: CREATED_AT
+        tests: [not_null]
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [SOURCE_SYSTEM, SOURCE_INVOICE_ID]

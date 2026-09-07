@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: ap_bronze
+    database: CAPSTONE_AI_DLC
+    schema: PIPELINE
+    description: >
+      Raw AP invoice extracts, one table per source ERP. Per PRD-AP-2025-001
+      BR-001 these are unmodified copies of the source extract - no filtering,
+      deduplication or type coercion happens at this layer.
+    tables:
+      - name: BRONZE_SAP_AP_INVOICES
+        description: SAP AP invoices (global).
+      - name: BRONZE_ORACLE_AP_INVOICES
+        description: Oracle EBS AP invoices (Americas).
+      - name: BRONZE_BAAN_AP_INVOICES
+        description: Infor Baan IV AP invoices (EMEA), onboarded by PRD-AP-2025-001.
+      - name: BRONZE_WORKDAY_AP_INVOICES
+        description: >
+          Workday Financials AP invoices. NOT onboarded. PRD-AP-2025-001 blocks
+          this source pending a signed Data Processing Agreement. Declared here
+          for lineage visibility only - no model may select from it.

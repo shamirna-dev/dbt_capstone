@@ -1,0 +1,27 @@
+name: 'capstone_ap_pipeline'
+version: '1.0.0'
+config-version: 2
+
+profile: 'capstone_ap_pipeline'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+
+# Materialisations follow STD-SQL-001: Bronze view, Silver and Gold dynamic_table.
+models:
+  capstone_ap_pipeline:
+    staging:
+      +materialized: view
+      +schema: PIPELINE
+    silver:
+      +materialized: dynamic_table
+      +snowflake_warehouse: COMPUTE_WH
+      +target_lag: '60 minutes'
+      +refresh_mode: INCREMENTAL
+      +schema: PIPELINE
+    gold:
+      +materialized: dynamic_table
+      +snowflake_warehouse: COMPUTE_WH
+      +target_lag: downstream
+      +refresh_mode: INCREMENTAL
+      +schema: PIPELINE
