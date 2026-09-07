@@ -82,6 +82,9 @@ cd app; snow streamlit deploy --replace -c $c
 | `n8n/` | Two workflow JSONs, setup guide, SQL API verification script |
 | `app/` | Streamlit dashboard |
 | `docs/CAPSTONE.md` | The write-up: architecture, evidence, findings, limitations |
+| `docs/AI_Capstone_L2_Shamirna_Antony.pptx` | Submission deck (Option 4 — AI Case Study) |
+| `docs/DECK_NOTES.md` | How the deck was filled, and the reasoning behind the self-rating |
+| `tools/` | Scripts that inspect and fill the deck template |
 
 ---
 
